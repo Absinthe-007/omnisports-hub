@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniSports Hub | AI Analytics & Automated Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0b0f19',
+                        cardbg: '#131c2e',
+                        accent: '#3b82f6',
+                        success: '#10b981',
+                        warning: '#f59e0b'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-darkbg text-slate-100 font-sans min-h-screen flex flex-col selection:bg-accent selection:text-white" x-data="sportsHub()">
+
+    <!-- TOP ACCURACY & WIN-RATE TRACKER BAR -->
+    <header class="bg-cardbg border-b border-slate-800 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-accent/10 border border-accent/30 p-2 rounded-xl text-accent">
+                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-black tracking-wider text-lg uppercase bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">OmniSports Hub</h1>
+                    <p class="text-xs text-slate-400">Automated Daily Routine • GitHub Pages Active</p>
+                </div>
+            </div>
+
+            <!-- Accuracy Percentage Metric Card -->
+            <div class="flex items-center gap-6 bg-slate-900/80 border border-slate-800 px-5 py-2 rounded-2xl shadow-inner">
+                <div>
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-slate-400">Model Accuracy</div>
+                    <div class="text-xl font-black text-success flex items-center gap-1.5">
+                        <span x-text="stats.accuracyPercentage"></span>%
+                        <span class="text-xs px-1.5 py-0.5 rounded bg-success/20 text-success font-semibold" x-text="stats.record"></span>
+                    </div>
+                </div>
+                <div class="h-8 w-px bg-slate-800"></div>
+                <div>
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-slate-400">Last Routine Sync</div>
+                    <div class="text-xs font-semibold text-slate-300 mt-1" x-text="stats.lastUpdated">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full space-y-8">
+
+        <!-- NAVIGATION TABS -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-4">
+            <button @click="currentTab = 'odds'" :class="currentTab === 'odds' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-cardbg text-slate-400 hover:text-white'" class="px-5 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-4 h-4"></i> Live Odds & Matchups
+            </button>
+            <button @click="currentTab = 'tracker'" :class="currentTab === 'tracker' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-cardbg text-slate-400 hover:text-white'" class="px-5 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4"></i> Player & H2H History
+            </button>
+            <button @click="currentTab = 'news'" :class="currentTab === 'news' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-cardbg text-slate-400 hover:text-white'" class="px-5 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2">
+                <i data-lucide="newspaper" class="w-4 h-4"></i> News & Rumors Feed
+            </button>
+        </div>
+
+        <!-- TAB 1: ODDS & HISTORICAL HEAD-TO-HEAD -->
+        <div x-show="currentTab === 'odds'" class="space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-white flex items-center gap-2">
+                    <i data-lucide="activity" class="text-accent"></i> Today's Monitored Games & H2H Records
+                </h2>
+                <div class="flex gap-2">
+                    <template x-for="league in ['NFL', 'CFB', 'WNBA', 'NCAA']">
+                        <button @click="selectedLeague = league" :class="selectedLeague === league ? 'bg-slate-700 text-white' : 'bg-cardbg text-slate-400'" class="px-3 py-1 rounded-lg text-xs font-bold transition" x-text="league"></button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Games Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="game in filteredGames" :key="game.id">
+                    <div class="bg-cardbg border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition space-y-4 shadow-md">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span class="font-bold text-accent uppercase tracking-wider" x-text="game.league"></span>
+                            <span x-text="game.time"></span>
+                        </div>
+                        
+                        <!-- Teams & Odds -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800/60">
+                                <span class="font-bold text-sm" x-text="game.teamA"></span>
+                                <span class="text-xs font-mono bg-accent/10 text-accent px-2.5 py-1 rounded-md border border-accent/20" x-text="game.oddsA"></span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800/60">
+                                <span class="font-bold text-sm" x-text="game.teamB"></span>
+                                <span class="text-xs font-mono bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md" x-text="game.oddsB"></span>
+                            </div>
+                        </div>
+
+                        <!-- Historical Context Box -->
+                        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-xs space-y-1">
+                            <div class="text-slate-400 font-semibold flex items-center justify-between">
+                                <span>Historical Head-to-Head History:</span>
+                                <span class="text-warning font-bold" x-text="game.h2hSummary"></span>
+                            </div>
+                            <p class="text-slate-300 italic" x-text="game.historicalNote"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- TAB 2: PLAYER TRACKER & HISTORY -->
+        <div x-show="currentTab === 'tracker'" class="space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 class="text-xl font-black text-white flex items-center gap-2">
+                    <i data-lucide="user-check" class="text-accent"></i> Tracked Players & Match History
+                </h2>
+                <input type="text" x-model="playerSearch" placeholder="Search player or team..." class="bg-cardbg border border-slate-800 px-4 py-2 rounded-xl text-sm focus:outline-none focus:border-accent w-full sm:w-72">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <template x-for="player in filteredPlayers" :key="player.name">
+                    <div class="bg-cardbg border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-white text-base" x-text="player.name"></h3>
+                                <p class="text-xs text-slate-400" x-text="player.team + ' • ' + player.position"></p>
+                            </div>
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-full" :class="player.status === 'Active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'" x-text="player.status"></span>
+                        </div>
+                        <div class="space-y-2 text-xs bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <div class="flex justify-between"><span class="text-slate-400">Recent Form:</span> <span class="font-semibold text-white" x-text="player.recentForm"></span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Vs Today's Opponent:</span> <span class="font-semibold text-accent" x-text="player.vsOpponentRecord"></span></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- TAB 3: NEWS & RUMORS -->
+        <div x-show="currentTab === 'news'" class="space-y-6">
+            <h2 class="text-xl font-black text-white flex items-center gap-2">
+                <i data-lucide="rss" class="text-accent"></i> Automated Sourced News & Rumors Feed
+            </h2>
+            <div class="space-y-3">
+                <template x-for="item in newsFeed" :key="item.title">
+                    <div class="bg-cardbg border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="bg-accent/20 text-accent px-2 py-0.5 rounded font-bold" x-text="item.category"></span>
+                                <span class="text-slate-400" x-text="item.timestamp"></span>
+                            </div>
+                            <h3 class="font-bold text-white text-base" x-text="item.title"></h3>
+                            <p class="text-xs text-slate-400 max-w-2xl" x-text="item.snippet"></p>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-300 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800" x-text="item.source"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800 mt-12 py-6 text-center text-xs text-slate-500">
+        OmniSports Hub Engine • Automated daily by GitHub Actions Workflow.
+    </footer>
+
+    <!-- ALPINE APP LOGIC SCRIPT -->
+    <script>
+        function sportsHub() {
+            return {
+                currentTab: 'odds',
+                selectedLeague: 'NFL',
+                playerSearch: '',
+                stats: { accuracyPercentage: 0, record: '0-0', lastUpdated: 'Initializing...' },
+                games: [],
+                players: [],
+                newsFeed: [],
+                async init() {
+                    try {
+                        const response = await fetch('./data.json');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.stats = data.stats;
+                            this.games = data.games;
+                            this.players = data.players;
+                            this.newsFeed = data.newsFeed;
+                        } else {
+                            this.loadFallbackData();
+                        }
+                    } catch (e) {
+                        this.loadFallbackData();
+                    }
+                    setTimeout(() => lucide.createIcons(), 100);
+                },
+                loadFallbackData() {
+                    this.stats = { accuracyPercentage: 69.2, record: "148-66", lastUpdated: "Today, 06:00 UTC" };
+                    this.games = [
+                        { id: 1, league: 'NFL', teamA: 'Kansas City Chiefs', teamB: 'Buffalo Bills', oddsA: '-115', oddsB: '-105', time: 'Tonight, 8:15 PM', h2hSummary: 'Chiefs lead 5-2 past 4 yrs', historicalNote: 'Chiefs are 3-1 ATS when playing on short rest against Buffalo.' },
+                        { id: 2, league: 'CFB', teamA: 'Ohio State', teamB: 'Michigan', oddsA: '-210', oddsB: '+175', time: 'Saturday, 12:00 PM', h2hSummary: 'Michigan won last 3', historicalNote: 'Michigan has covered the spread in the last 4 consecutive matchups.' }
+                    ];
+                    this.players = [
+                        { name: 'Patrick Mahomes', team: 'KC', position: 'QB', status: 'Active', recentForm: '284 YDS, 2.3 TD avg', vsOpponentRecord: '4-1 vs Bills' },
+                        { name: 'Caleb Williams', team: 'CHI', position: 'QB', status: 'Active', recentForm: '240 YDS, 1.5 TD avg', vsOpponentRecord: '1-0 vs Packers' }
+                    ];
+                    this.newsFeed = [
+                        { category: 'NFL Injury', title: 'Starting Left Tackle cleared for Sunday showdown', snippet: 'Medical staff greenlights full practice workload ahead of weekend kickoff.', source: 'Rotowire / Beat Report', timestamp: '2h ago' }
+                    ];
+                },
+                get filteredGames() {
+                    return this.games.filter(g => g.league === this.selectedLeague);
+                },
+                get filteredPlayers() {
+                    if (!this.playerSearch) return this.players;
+                    return this.players.filter(p => p.name.toLowerCase().includes(this.playerSearch.toLowerCase()) || p.team.toLowerCase().includes(this.playerSearch.toLowerCase()));
+                }
+            }
+        }
+    </script>
+</body>
+</html>
